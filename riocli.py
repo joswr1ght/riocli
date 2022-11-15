@@ -3,6 +3,8 @@
 import sys
 import json
 import pathlib
+import argparse
+import textwrap
 import pdb
 
 import requests
@@ -10,6 +12,8 @@ import requests
 
 apiurl = 'https://ranges.io/api/v1'
 apipackage = '/package'
+credentialfiledefault = pathlib.Path.home() / '.rio' / 'credentials'
+apiserver = 'https://ranges.io'
 
 
 def getpackagelist(token:str) -> str:
@@ -154,70 +158,48 @@ def readcredentials(credfile="") -> str:
     """
 
     if (credfile == ""):
-        credfile = pathlib.Path.home() / '.rio' / 'credentials'
+        credfile = credentialfiledefault
 
     with open(credfile, 'r') as fp:
         return fp.readline().strip()
 
 
-def usage():
-    """ Display usage information
 
-    Display usage information.
-
-    Parameters
-    ----------
-    None
-    """
-
-    print ("""
-usage: riocli [options] <command> [parameters]
-To see help text, you can run:
-
-  riocli help
-  riocli <command> help
-
-""")
-
-
-def showhelp():
+def _parser_help(parser):
     """ Display help information
 
-    Display help information.
+    Return help information.
 
     Parameters
     ----------
     None
     """
 
-    print("""
+    return f"""
 NAME
        riocli
 
 DESCRIPTION
-       The  Range.io Command Line Interface is a tool to manage your Ranges.io
-       packages.
+       The Range.io Command Line Interface (riocli) is a tool to manage and
+       manipulate your Ranges.io packages.
 
 SYNOPSIS
-          riocli [options] <command> [parameters]
+
+       riocli [options] <command> [parameters]
 
        Use riocli <command> help for information on a  specific  command.  The
        synopsis for each command shows its parameters and their usage. Optional
        parameters are shown in square brackets.
 
+USAGE
+
+       {parser.format_usage()}
+
 OPTIONS
-       --config (string)
+       -c|--config (string)
 
        Specify an Ranges.io credentials file with the API token. Defaults to
        ~/.rio/credentials.
-
-       --debug (boolean)
-
-       Turn on debug logging.
-
-       --endpoint-url (string)
-
-       Override the command's default URL with the given URL.
 
 AVAILABLE SERVICES
 
@@ -229,43 +211,29 @@ AVAILABLE SERVICES
        o help
        o list-packages
        o list-permissions
-""")
+"""
 
 
-def showhelplistpackages():
-    """ Display help information for list-packages connabd
-
-    Display help information for the list-packages command.
-
-    Parameters
-    ----------
-    None
-    """
-
-    print("""
+def _parser_listpackages_help(parser):
+    return f"""
 DESCRIPTION
 
         list-packages will display a list of the packages available with the
         calling token including the ID and package name information.
 
+USAGE
+
+        {parser.format_usage()}
+
 EXAMPLE
 
         riocli list-packages
 
-""")
+"""
 
 
-def showhelpgetpackage():
-    """ Display help information for get-package connabd
-
-    Display help information for the get-package command.
-
-    Parameters
-    ----------
-    None
-    """
-
-    print("""
+def _parser_getpackage_help(parser):
+    return f"""
 DESCRIPTION
 
         get-package will display the specified package contents. You must
@@ -273,67 +241,177 @@ DESCRIPTION
 
         You can get a list of your packages using list-packages.
 
+USAGE
+
+        {parser.format_usage()}
+
 EXAMPLE
 
         riocli get-package 9a511970-485d-471c-ab3f-b7214319a8b3
 
-""")
+"""
+
+
+def _parser_adddebriefhints_help(parser):
+    return f"""
+DESCRIPTION
+
+        add-debrief-hints will add a debrief for successfully-answered
+        questions. Existing debriefs are not modified (use delete-debriefs if
+        you want to purge and create debrief hints as the only debrief for each
+        question.
+
+        By default, add-debrief-hints will display the debrief using the following format:
+
+        Title: Answer
+        Debrief:
+        Correct! Here is the question summary.
+
+        #### Question
+
+        {{question}}
+
+        #### Hints
+
+        {{hint1name}}:
+
+        {{hint1content}}
+
+        ... repeated for all hints
+
+        #### Answer
+
+        {{answer}}
+
+
+        You can customize the debrief content formatting using an ASCII text
+        template file (--template).  Use the markers {{{{question}}}},
+        {{{{hints}}}}, and {{{{answer}}}} to populate the template content.
+
+USAGE
+
+        {parser.format_usage()}
+
+EXAMPLE
+
+        riocli add-debrief-hints --packageid 9a511970-485d-471c-ab3f-b7214319a8b3
+
+        riocli add-debrief-hints --packageid 9a511970-485d-471c-ab3f-b7214319a8b3 -t debrieftemplate.txt
+
+"""
+
+
+def _parser_adddebriefhints_help(parser):
+    return f"""
+    TODO
+"""
+
+
+def _parser_addpackage_help(parser):
+    return f"""
+    TODO
+"""
+
+
+def _parser_listpermissions_help(parser):
+    return f"""
+    TODO
+"""
+
+
+def _parser_getuseridentity_help(parser):
+    return f"""
+    TODO
+"""
+
+
+class RiocliParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('my custom error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+
+def _parse_process():
+
+    parser = RiocliParser(formatter_class=argparse.RawTextHelpFormatter)
+
+    # These are core arguments to riocli
+    parser.add_argument('-c','--config', type=str)
+    # TODO
+    # parser.add_argument('-u','--endpoint-url', type=str, nargs='?', const=apiserver)
+    # parser.add_argument('--debug', action='store_true')
+    parser.set_defaults(config=credentialfiledefault)
+    parser.epilog = _parser_help(parser)
+
+    # Add the subparser for riocli commands
+    subparser = parser.add_subparsers(dest='command')
+
+    # add-debrief-hints
+    parser_adddebriefhints = subparser.add_parser('add-debrief-hints',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_adddebriefhints.add_argument('-p', '--packageid', type=str, required=True)
+    parser_adddebriefhints.add_argument('-t', '--template', type=str, required=False)
+    parser_adddebriefhints.epilog = _parser_adddebriefhints_help(parser_adddebriefhints)
+
+    # add-package
+    parser_addpackage = subparser.add_parser('add-package',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_addpackage.add_argument('-f', '--packagefile', type=str, required=True)
+    parser_addpackage.epilog = _parser_addpackage_help(parser_adddebriefhints)
+
+    # list-packages
+    parser_listpackages = subparser.add_parser('list-packages',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_listpackages.epilog = _parser_listpackages_help(parser_listpackages)
+
+    # list-permissions
+    parser_listpermissions = subparser.add_parser('list-permissions',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_listpermissions.epilog = _parser_listpermissions_help(parser_listpermissions)
+
+    # get-package
+    parser_getpackage = subparser.add_parser('get-package',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_getpackage.add_argument('-p', '--packageid', type=str, required=True)
+    parser_getpackage.epilog = _parser_getpackage_help(parser_getpackage)
+
+    # get-user-identity
+    parser_getuseridentity = subparser.add_parser('get-user-identity',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_getuseridentity.epilog = _parser_getuseridentity_help(parser_getuseridentity)
+
+    # list-permissions
+    parser_listpermissions = subparser.add_parser('list-permissions',
+                    formatter_class=argparse.RawTextHelpFormatter)
+    parser_listpermissions.epilog = _parser_listpermissions_help(parser_listpermissions)
+
+
+    # Override the default argparse behavior to show nothing when run without
+    # arguments; instead, we show the default argparse `--help` output
+    if (len(sys.argv) == 1):
+        parser.print_usage()
+        sys.exit(0)
+
+    args = parser.parse_args()
+
+    token = readcredentials()
+
+    if args.command == 'list-packages':
+        printpackagelist(getpackagelist(token))
+    elif args.command == 'list-permissions':
+        printpermissions(getpermissions(token))
+    elif args.command == 'get-user-identity':
+        printuser(getuser(token))
+    elif args.command == 'get-package':
+        pdb.set_trace()
+        printpackage(getpackage(token, args.packageid))
+
 
 
 if __name__ == '__main__':
 
-    rioclicommands = [
-            'add-package',
-            'list-packages',
-            'list-permissions',
-            'get-user-identity',
-            'get-package',
-            'add-debrief-hints',
-            'delete-debrief',
-            'delete-debriefs',
-            'delete-package'
-            ]
+    # It's uncouth to put a lot of code in main, so I moved it all to
+    # _parse_process()
+    _parse_process()
 
-    if (len(sys.argv) == 1):
-        usage()
-        print('riocli: error: the following arguments are required: <command>')
-        sys.exit(-1)
-
-    # TODO: Process -c argument for credentials
-    token = readcredentials()
-
-    # TODO: Figure out a way to test command line arguments and support help requests
-    command = sys.argv[1]
-    if (command == 'help'):
-        showhelp()
-    elif (command == 'list-packages'):
-        printpackagelist(getpackagelist(token))
-    elif (command == 'list-permissions'):
-        printpermissions(getpermissions(token))
-    elif (command == 'get-user-identity'):
-        printuser(getuser(token))
-    elif (command == 'get-package'):
-        # TODO: This is a mess
-        if (len(sys.argv) > 2 and sys.argv[2] == "help"):
-            showhelpgetpackage()
-        elif (len(sys.argv) < 3):
-            showhelpgetpackage()
-            print('riocli: error: the following arguments are required: <UUID>')
-        else:
-            printpackage(getpackage(token, sys.argv[2]))
-    # TODO
-    elif (command == 'add-debrief-hints'):
-        print('Not yet implemented.')
-    elif (command == 'delete-debrief'):
-        print('Not yet implemented.')
-    elif (command == 'delete-debriefs'):
-        print('Not yet implemented.')
-    elif (command == 'delete-package'):
-        print('Not yet implemented.')
-    elif (command == 'add-package'):
-        print('Not yet implemented.')
-    else:
-        usage()
-        print(f'riocli: invalid command "{command}", valid choices are:')
-        for command in rioclicommands:
-            print(f'    o {command}')
