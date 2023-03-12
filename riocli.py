@@ -6,13 +6,52 @@ import pathlib
 import argparse
 import requests
 # import textwrap
-# import pdb
+import pdb
 
 
 apiurl = 'https://ranges.io/api/v1'
 apipackage = '/package'
 credentialfiledefault = pathlib.Path.home() / '.rio' / 'credentials'
 apiserver = 'https://ranges.io'
+
+
+def adddebriefhints(token: str, uuid: str, template) -> str:
+    """Retrieve the Ranges.io package using token and uuid and modify the JSON
+    to replace debrief field with question, answer, and hints.
+
+    Return modified JSON
+
+    Parameters
+    ----------
+    token: str, required
+        The token for author package access.
+
+    uuid: str, required
+        The Ranges.io package ID
+
+    template: str, optional
+        A template Markdown file using the markers {{{{question}}}},
+        {{{{hints}}}}, and {{{{answer}}}} to populate the template content.
+    """
+    package = json.loads(getpackage(token, uuid))
+    if package is None:
+        sys.stderr.write('Invalid response retrieving specified package (network error?)\n')
+        return None
+
+    try:
+        for error in package['errors']:
+            if error['code'] == 'PKGNOTFOUND':
+                sys.stderr.write(f'Package not found for specified package ID ({uuid}).\n')
+            return None
+    except KeyError:
+        # No key `error` in package
+        pass
+
+    # We want to work with the actual package, not the server response data
+    package = package['package']['export']
+    for group in package['groups']:
+        for challenge in group['challenges']:
+            print(f'{group["name"]} - {challenge["longTitle"]}')
 
 
 def getpackagelist(token: str) -> str:
@@ -350,7 +389,7 @@ def _parse_process():
     parser_addpackage = subparser.add_parser('add-package',
                                              formatter_class=argparse.RawTextHelpFormatter)
     parser_addpackage.add_argument('-f', '--packagefile', type=str, required=True)
-    parser_addpackage.epilog = _parser_addpackage_help(parser_adddebriefhints)
+    parser_addpackage.epilog = _parser_addpackage_help(parser_addpackage)
 
     # list-packages
     parser_listpackages = subparser.add_parser('list-packages',
@@ -383,7 +422,9 @@ def _parse_process():
 
     token = readcredentials()
 
-    if args.command == 'list-packages':
+    if args.command == 'add-debrief-hints':
+        adddebriefhints(token, args.packageid, args.template)
+    elif args.command == 'list-packages':
         printpackagelist(getpackagelist(token))
     elif args.command == 'list-permissions':
         printpermissions(getpermissions(token))
