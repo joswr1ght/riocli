@@ -4,10 +4,9 @@ import sys
 import json
 import pathlib
 import argparse
-import textwrap
-import pdb
-
 import requests
+# import textwrap
+# import pdb
 
 
 apiurl = 'https://ranges.io/api/v1'
@@ -16,7 +15,7 @@ credentialfiledefault = pathlib.Path.home() / '.rio' / 'credentials'
 apiserver = 'https://ranges.io'
 
 
-def getpackagelist(token:str) -> str:
+def getpackagelist(token: str) -> str:
     """Get the list of Ranges.io packages for the supplied token
 
     Request and return the JSON for the package list endpoint.
@@ -32,7 +31,7 @@ def getpackagelist(token:str) -> str:
     return response.text
 
 
-def getpermissions(token:str) -> list:
+def getpermissions(token: str) -> list:
     """Get the Ranges.io permissions for the specified token.
 
     Return a list of the Ranges.io permissions for the specified token.
@@ -47,7 +46,7 @@ def getpermissions(token:str) -> list:
     return packagedata['permissions']
 
 
-def printpermissions(permissions:list) -> None:
+def printpermissions(permissions: list) -> None:
     """Print the list of permissions returned by getpermissions()
 
     Use the list from getpermissionslist(), print the permissions one per line.
@@ -62,7 +61,7 @@ def printpermissions(permissions:list) -> None:
         print(permission)
 
 
-def getuser(token:str) -> list:
+def getuser(token: str) -> list:
     """Get the Ranges.io user for the specified token.
 
     Return the user details associated with the specified token.
@@ -77,7 +76,7 @@ def getuser(token:str) -> list:
     return packagedata['request']['requester']
 
 
-def printuser(user:dict) -> None:
+def printuser(user: dict) -> None:
     """Print the user detailed returned by getuser()
 
     Use the dict from getuser(), print the user information details, one per line.
@@ -94,7 +93,7 @@ def printuser(user:dict) -> None:
     print(f'ID:        {user["id"]}')
 
 
-def getpackage(token:str, uuid:str) -> str:
+def getpackage(token: str, uuid: str) -> str:
     """Get the specified Ranges.io package for the supplied package id and token
 
     Request and return the JSON for the Ranges.io package specified by the UUID
@@ -114,7 +113,7 @@ def getpackage(token:str, uuid:str) -> str:
     return response.text
 
 
-def printpackage(package:str) -> None:
+def printpackage(package: str) -> None:
     """Print the packages returned by getpackage() as pretty JSON
 
     Use the response from getpackage() and print the JSON data.
@@ -127,7 +126,7 @@ def printpackage(package:str) -> None:
     print(json.dumps(json.loads(package), indent=4))
 
 
-def printpackagelist(response:str) -> None:
+def printpackagelist(response: str) -> None:
     """Print the list of packages returned by getpackagelist() as {UUID} -- Package Name
 
     Use the response JSON data from getpackagelist(), retrieve a list of package
@@ -162,7 +161,6 @@ def readcredentials(credfile="") -> str:
 
     with open(credfile, 'r') as fp:
         return fp.readline().strip()
-
 
 
 def _parser_help(parser):
@@ -301,26 +299,20 @@ EXAMPLE
 """
 
 
-def _parser_adddebriefhints_help(parser):
-    return f"""
-    TODO
-"""
-
-
 def _parser_addpackage_help(parser):
-    return f"""
+    return """
     TODO
 """
 
 
 def _parser_listpermissions_help(parser):
-    return f"""
+    return """
     TODO
 """
 
 
 def _parser_getuseridentity_help(parser):
-    return f"""
+    return """
     TODO
 """
 
@@ -337,7 +329,7 @@ def _parse_process():
     parser = RiocliParser(formatter_class=argparse.RawTextHelpFormatter)
 
     # These are core arguments to riocli
-    parser.add_argument('-c','--config', type=str)
+    parser.add_argument('-c', '--config', type=str)
     # TODO
     # parser.add_argument('-u','--endpoint-url', type=str, nargs='?', const=apiserver)
     # parser.add_argument('--debug', action='store_true')
@@ -349,43 +341,37 @@ def _parse_process():
 
     # add-debrief-hints
     parser_adddebriefhints = subparser.add_parser('add-debrief-hints',
-                    formatter_class=argparse.RawTextHelpFormatter)
+                                                  formatter_class=argparse.RawTextHelpFormatter)
     parser_adddebriefhints.add_argument('-p', '--packageid', type=str, required=True)
     parser_adddebriefhints.add_argument('-t', '--template', type=str, required=False)
     parser_adddebriefhints.epilog = _parser_adddebriefhints_help(parser_adddebriefhints)
 
     # add-package
     parser_addpackage = subparser.add_parser('add-package',
-                    formatter_class=argparse.RawTextHelpFormatter)
+                                             formatter_class=argparse.RawTextHelpFormatter)
     parser_addpackage.add_argument('-f', '--packagefile', type=str, required=True)
     parser_addpackage.epilog = _parser_addpackage_help(parser_adddebriefhints)
 
     # list-packages
     parser_listpackages = subparser.add_parser('list-packages',
-                    formatter_class=argparse.RawTextHelpFormatter)
+                                               formatter_class=argparse.RawTextHelpFormatter)
     parser_listpackages.epilog = _parser_listpackages_help(parser_listpackages)
 
     # list-permissions
     parser_listpermissions = subparser.add_parser('list-permissions',
-                    formatter_class=argparse.RawTextHelpFormatter)
+                                                  formatter_class=argparse.RawTextHelpFormatter)
     parser_listpermissions.epilog = _parser_listpermissions_help(parser_listpermissions)
 
     # get-package
     parser_getpackage = subparser.add_parser('get-package',
-                    formatter_class=argparse.RawTextHelpFormatter)
+                                             formatter_class=argparse.RawTextHelpFormatter)
     parser_getpackage.add_argument('-p', '--packageid', type=str, required=True)
     parser_getpackage.epilog = _parser_getpackage_help(parser_getpackage)
 
     # get-user-identity
     parser_getuseridentity = subparser.add_parser('get-user-identity',
-                    formatter_class=argparse.RawTextHelpFormatter)
+                                                  formatter_class=argparse.RawTextHelpFormatter)
     parser_getuseridentity.epilog = _parser_getuseridentity_help(parser_getuseridentity)
-
-    # list-permissions
-    parser_listpermissions = subparser.add_parser('list-permissions',
-                    formatter_class=argparse.RawTextHelpFormatter)
-    parser_listpermissions.epilog = _parser_listpermissions_help(parser_listpermissions)
-
 
     # Override the default argparse behavior to show nothing when run without
     # arguments; instead, we show the default argparse `--help` output
@@ -404,14 +390,9 @@ def _parse_process():
     elif args.command == 'get-user-identity':
         printuser(getuser(token))
     elif args.command == 'get-package':
-        pdb.set_trace()
         printpackage(getpackage(token, args.packageid))
-
 
 
 if __name__ == '__main__':
 
-    # It's uncouth to put a lot of code in main, so I moved it all to
-    # _parse_process()
     _parse_process()
-
