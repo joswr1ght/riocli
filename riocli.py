@@ -5,6 +5,7 @@ import json
 import pathlib
 import argparse
 import requests
+import re
 # import textwrap
 import pdb
 
@@ -13,6 +14,68 @@ apiurl = 'https://ranges.io/api/v1'
 apipackage = '/package'
 credentialfiledefault = pathlib.Path.home() / '.rio' / 'credentials'
 apiserver = 'https://ranges.io'
+
+
+def _summarizechallenge(challenge):
+    """
+    Accept a challenge object and make opinionated summary decisions,
+    returning a multi-line string.
+
+    Parameters
+    ----------
+    challenge: str, required
+        The challenge object from the package
+    """
+    # challengetitle = f'{group["name"]} - {challenge["longTitle"]}'
+    challengebriefing = f'{challenge["briefing"]}'
+
+    challengeanswers = ''
+    for answer in challenge['answer']['answers']:
+        # Sometimes answer['value'] is an empty string
+        if answer['correct'] and answer['value']:
+            # Ranges.io doesn't store the flag in flag format;
+            # reconstruct flag format for player
+            if challenge['answer']['mode'] == 'Prefixed':
+                challengeanswers += f"* {challenge['answer']['prefix']}{{{answer['value']}}}, "
+            else:
+                challengeanswers += f"* {answer['value']}, "
+    challengeanswers = challengeanswers[:-2]
+
+    challengehints = ''
+    for hint in challenge['hints']['options']:
+        challengehints += f"{hint['title']} -- {hint['content']}\n"
+    challengehints = challengehints[:-1]
+
+    if challengeanswers and challengehints:
+        debrief = f"""
+Briefing: {challengebriefing}
+
+Answer(s):
+{challengeanswers}
+
+{challengehints}
+"""
+    elif challengeanswers and not challengehints:
+        debrief = f"""
+Briefing: {challengebriefing}
+
+Answer(s):
+{challengeanswers}
+"""
+    elif challengehints and not challengeanswers:
+        # I don't think there will be a time when there are hints but no answer /shrug
+        debrief = f"""
+Briefing: {challengebriefing}
+
+{challengehints}
+"""
+    else:
+        # No answers and no hints
+        debrief = f"""
+Briefing: {challengebriefing}
+"""
+
+    return debrief
 
 
 def adddebriefhints(token: str, uuid: str, template) -> str:
@@ -51,7 +114,15 @@ def adddebriefhints(token: str, uuid: str, template) -> str:
     package = package['package']['export']
     for group in package['groups']:
         for challenge in group['challenges']:
-            print(f'{group["name"]} - {challenge["longTitle"]}')
+            briefing = _summarizechallenge(challenge)
+
+            # If the briefing includes at least an `^Answer` block, then make it the debrief
+            if (re.search(r'^Answer', briefing, flags=re.MULTILINE)):
+                debrief = {'activationMode': 'Any correct answer',
+                           'content': briefing}
+                challenge['debriefs'] = [debrief]
+
+    print(json.dumps(package))
 
 
 def getpackagelist(token: str) -> str:
