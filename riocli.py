@@ -29,7 +29,7 @@ def _summarizechallenge(challenge):
         The challenge object from the package
     """
     # challengetitle = f'{group["name"]} - {challenge["longTitle"]}'
-    challengebriefing = f'{challenge["briefing"]}'
+    # challengebriefing = f'{challenge["briefing"]}'
 
     challengeanswers = ''
     for answer in challenge['answer']['answers']:
@@ -50,21 +50,27 @@ def _summarizechallenge(challenge):
 
     if challengeanswers and challengehints:
         debrief = f"""
-Answer(s):
+## Answer(s)
 
 {challengeanswers}
+
+## Hint(s)
+
+Hint(s)
 
 {challengehints}
 """
     elif challengeanswers and not challengehints:
         debrief = f"""
-Answer(s):
+## Answer(s)
 
 {challengeanswers}
 """
     elif challengehints and not challengeanswers:
         # I don't think there will be a time when there are hints but no answer /shrug
         debrief = f"""
+## Hint(s)
+
 {challengehints}
 """
     else:
@@ -113,9 +119,9 @@ def adddebriefhints(token: str, uuid: str, template) -> str:
         for challenge in group['challenges']:
             briefing = _summarizechallenge(challenge)
 
-            # If the briefing includes at least an `^Answer` block, then make it the debrief
-            if (re.search(r'^Answer', briefing, flags=re.MULTILINE)):
-                debrief = {'title': challenge["briefing"],
+            # If the briefing includes at least an `Answer` string, then make it the debrief
+            if ('Answer' in briefing):
+                debrief = {'title': f'Debrief: {challenge["briefing"]}',
                            'activationMode': 'Any correct answer',
                            'content': briefing}
                 challenge['debriefs'] = [debrief]
