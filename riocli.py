@@ -493,46 +493,46 @@ def _parse_process():
     parser.set_defaults(config=credentialfiledefault)
     parser.epilog = _parser_help(parser)
 
-    # Add the subparser for riocli commands
-    subparser = parser.add_subparsers(dest='command')
+    # Add the subparser for riocli package commands
+    packagesubparser = parser.add_subparsers(dest='packagecommand')
 
     # add-debrief-hints
-    parser_adddebriefhints = subparser.add_parser('add-debrief-hints',
-                                                  formatter_class=argparse.RawTextHelpFormatter)
+    parser_adddebriefhints = packagesubparser.add_parser('add-debrief-hints',
+                                                         formatter_class=argparse.RawTextHelpFormatter)
     parser_adddebriefhints.add_argument('-p', '--packageid', type=str, required=True)
     parser_adddebriefhints.epilog = _parser_adddebriefhints_help(parser_adddebriefhints)
 
     # delete-debriefs
-    parser_deletedebriefs = subparser.add_parser('delete-debriefs',
-                                                 formatter_class=argparse.RawTextHelpFormatter)
+    parser_deletedebriefs = packagesubparser.add_parser('delete-debriefs',
+                                                        formatter_class=argparse.RawTextHelpFormatter)
     parser_deletedebriefs.add_argument('-p', '--packageid', type=str, required=True)
     parser_deletedebriefs.epilog = _parser_deletedebriefs_help(parser_deletedebriefs)
 
     # add-package
-    parser_addpackage = subparser.add_parser('add-package',
-                                             formatter_class=argparse.RawTextHelpFormatter)
+    parser_addpackage = packagesubparser.add_parser('add-package',
+                                                    formatter_class=argparse.RawTextHelpFormatter)
     parser_addpackage.add_argument('-f', '--packagefile', type=str, required=True)
     parser_addpackage.epilog = _parser_addpackage_help(parser_addpackage)
 
     # list-packages
-    parser_listpackages = subparser.add_parser('list-packages',
-                                               formatter_class=argparse.RawTextHelpFormatter)
+    parser_listpackages = packagesubparser.add_parser('list-packages',
+                                                      formatter_class=argparse.RawTextHelpFormatter)
     parser_listpackages.epilog = _parser_listpackages_help(parser_listpackages)
 
     # list-permissions
-    parser_listpermissions = subparser.add_parser('list-permissions',
-                                                  formatter_class=argparse.RawTextHelpFormatter)
+    parser_listpermissions = packagesubparser.add_parser('list-permissions',
+                                                         formatter_class=argparse.RawTextHelpFormatter)
     parser_listpermissions.epilog = _parser_listpermissions_help(parser_listpermissions)
 
     # get-package
-    parser_getpackage = subparser.add_parser('get-package',
-                                             formatter_class=argparse.RawTextHelpFormatter)
+    parser_getpackage = packagesubparser.add_parser('get-package',
+                                                    formatter_class=argparse.RawTextHelpFormatter)
     parser_getpackage.add_argument('-p', '--packageid', type=str, required=True)
     parser_getpackage.epilog = _parser_getpackage_help(parser_getpackage)
 
     # get-user-identity
-    parser_getuseridentity = subparser.add_parser('get-user-identity',
-                                                  formatter_class=argparse.RawTextHelpFormatter)
+    parser_getuseridentity = packagesubparser.add_parser('get-user-identity',
+                                                         formatter_class=argparse.RawTextHelpFormatter)
     parser_getuseridentity.epilog = _parser_getuseridentity_help(parser_getuseridentity)
 
     # Override the default argparse behavior to show nothing when run without
@@ -545,17 +545,17 @@ def _parse_process():
 
     token = readcredentials()
 
-    if args.command == 'add-debrief-hints':
+    if args.packagecommand == 'add-debrief-hints':
         adddebriefhints(token, args.packageid)
-    elif args.command == 'list-packages':
+    elif args.packagecommand == 'list-packages':
         printpackagelist(getpackagelist(token))
-    elif args.command == 'list-permissions':
+    elif args.packagecommand == 'list-permissions':
         printpermissions(getpermissions(token))
-    elif args.command == 'get-user-identity':
+    elif args.packagecommand == 'get-user-identity':
         printuser(getuser(token))
-    elif args.command == 'get-package':
+    elif args.packagecommand == 'get-package':
         printpackage(getpackage(token, args.packageid))
-    elif args.command == 'delete-debriefs':
+    elif args.packagecommand == 'delete-debriefs':
         deletedebriefs(token, args.packageid)
 
 
