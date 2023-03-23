@@ -8,6 +8,8 @@ import requests
 import re
 # import textwrap
 import pdb
+import logging
+import http.client
 
 
 apiurl = 'https://ranges.io/api/v1'
@@ -43,39 +45,34 @@ def _summarizechallenge(challenge):
 
     challengehints = ''
     for hint in challenge['hints']['options']:
-        challengehints += f"{hint['title']} -- {hint['content']}\n"
+        challengehints += f"{hint['title']} -- {hint['content']}\n\n"
     challengehints = challengehints[:-1]
 
     if challengeanswers and challengehints:
         debrief = f"""
-Briefing: {challengebriefing}
-
 Answer(s):
+
 {challengeanswers}
 
 {challengehints}
 """
     elif challengeanswers and not challengehints:
         debrief = f"""
-Briefing: {challengebriefing}
-
 Answer(s):
+
 {challengeanswers}
 """
     elif challengehints and not challengeanswers:
         # I don't think there will be a time when there are hints but no answer /shrug
         debrief = f"""
-Briefing: {challengebriefing}
-
 {challengehints}
 """
     else:
         # No answers and no hints
-        debrief = f"""
-Briefing: {challengebriefing}
-"""
+        debrief = ''
 
-    return debrief
+    # Remove Windows CRLF before returning
+    return debrief.replace('\r\n', '\n')
 
 
 def adddebriefhints(token: str, uuid: str, template) -> str:
@@ -96,13 +93,13 @@ def adddebriefhints(token: str, uuid: str, template) -> str:
         A template Markdown file using the markers {{{{question}}}},
         {{{{hints}}}}, and {{{{answer}}}} to populate the template content.
     """
-    package = json.loads(getpackage(token, uuid))
-    if package is None:
+    p = json.loads(getpackage(token, uuid))
+    if p is None:
         sys.stderr.write('Invalid response retrieving specified package (network error?)\n')
         return None
 
     try:
-        for error in package['errors']:
+        for error in p['errors']:
             if error['code'] == 'PKGNOTFOUND':
                 sys.stderr.write(f'Package not found for specified package ID ({uuid}).\n')
             return None
@@ -111,18 +108,37 @@ def adddebriefhints(token: str, uuid: str, template) -> str:
         pass
 
     # We want to work with the actual package, not the server response data
-    package = package['package']['export']
+    package = p['package']['export']
     for group in package['groups']:
         for challenge in group['challenges']:
             briefing = _summarizechallenge(challenge)
 
             # If the briefing includes at least an `^Answer` block, then make it the debrief
             if (re.search(r'^Answer', briefing, flags=re.MULTILINE)):
-                debrief = {'activationMode': 'Any correct answer',
+                debrief = {'title': challenge["briefing"],
+                           'activationMode': 'Any correct answer',
                            'content': briefing}
                 challenge['debriefs'] = [debrief]
 
-    print(json.dumps(package))
+    # Restore the package header content before export data with modifications
+    # to debriefs
+    # with open('out.json', 'w') as f:
+    #     f.write(json.dumps(package, indent=1))
+
+    # http.client.HTTPConnection.debuglevel = 1
+    # logging.basicConfig()
+    # logging.getLogger().setLevel(logging.DEBUG)
+    # requests_log = logging.getLogger("requests.packages.urllib3")
+    # requests_log.setLevel(logging.DEBUG)
+    # requests_log.propagate = True
+
+    response = requests.put(f'{apiurl}{apipackage}/{uuid}',
+                            headers={'Authorization': f'Bearer {token}',
+                                     'content-type': 'application/x-www-form-urlencoded',
+                                     'User-Agent': 'curl/7.87.0'},
+                            data=json.dumps(package))
+
+    return response.text
 
 
 def getpackagelist(token: str) -> str:
