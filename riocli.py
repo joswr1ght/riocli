@@ -476,7 +476,7 @@ def _parser_getuseridentity_help(parser):
 
 class RiocliParser(argparse.ArgumentParser):
     def error(self, message):
-        sys.stderr.write('my custom error: %s\n' % message)
+        sys.stderr.write(f'ERROR: {message}')
         self.print_help()
         sys.exit(2)
 
