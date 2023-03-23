@@ -56,8 +56,6 @@ def _summarizechallenge(challenge):
 
 ## Hint(s)
 
-Hint(s)
-
 {challengehints}
 """
     elif challengeanswers and not challengehints:
@@ -81,7 +79,46 @@ Hint(s)
     return debrief.replace('\r\n', '\n')
 
 
-def adddebriefhints(token: str, uuid: str, template) -> str:
+def deletedebriefs(token: str, uuid: str) -> None:
+    """Retrieve the Ranges.io package using token and uuid and modify the JSON
+    to remove debrief fields.
+
+    Return None
+
+    Parameters
+    ----------
+    token: str, required
+        The token for author package access.
+
+    uuid: str, required
+        The Ranges.io package ID
+    """
+    p = json.loads(getpackage(token, uuid))
+    if p is None:
+        sys.stderr.write('Invalid response retrieving specified package (network error?)\n')
+        return None
+
+    try:
+        for error in p['errors']:
+            if error['code'] == 'PKGNOTFOUND':
+                sys.stderr.write(f'Package not found for specified package ID ({uuid}).\n')
+            return None
+    except KeyError:
+        # No key `error` in package
+        pass
+
+    # We want to work with the actual package, not the server response data
+    package = p['package']['export']
+    for group in package['groups']:
+        for challenge in group['challenges']:
+            challenge['debriefs'] = []
+
+    requests.put(f'{apiurl}{apipackage}/{uuid}',
+                 headers={'Authorization': f'Bearer {token}'},
+                 data=json.dumps(package))
+
+
+def adddebriefhints(token: str, uuid: str) -> str:
     """Retrieve the Ranges.io package using token and uuid and modify the JSON
     to replace debrief field with question, answer, and hints.
 
@@ -94,10 +131,6 @@ def adddebriefhints(token: str, uuid: str, template) -> str:
 
     uuid: str, required
         The Ranges.io package ID
-
-    template: str, optional
-        A template Markdown file using the markers {{{{question}}}},
-        {{{{hints}}}}, and {{{{answer}}}} to populate the template content.
     """
     p = json.loads(getpackage(token, uuid))
     if p is None:
@@ -126,22 +159,11 @@ def adddebriefhints(token: str, uuid: str, template) -> str:
                            'content': briefing}
                 challenge['debriefs'] = [debrief]
 
-    # Restore the package header content before export data with modifications
-    # to debriefs
     # with open('out.json', 'w') as f:
     #     f.write(json.dumps(package, indent=1))
 
-    # http.client.HTTPConnection.debuglevel = 1
-    # logging.basicConfig()
-    # logging.getLogger().setLevel(logging.DEBUG)
-    # requests_log = logging.getLogger("requests.packages.urllib3")
-    # requests_log.setLevel(logging.DEBUG)
-    # requests_log.propagate = True
-
     response = requests.put(f'{apiurl}{apipackage}/{uuid}',
-                            headers={'Authorization': f'Bearer {token}',
-                                     'content-type': 'application/x-www-form-urlencoded',
-                                     'User-Agent': 'curl/7.87.0'},
+                            headers={'Authorization': f'Bearer {token}'},
                             data=json.dumps(package))
 
     return response.text
@@ -334,7 +356,6 @@ OPTIONS
 AVAILABLE SERVICES
 
        o add-debrief-hints
-       o delete-debrief
        o delete-debriefs
        o get-package
        o get-user-identity
@@ -393,30 +414,19 @@ DESCRIPTION
 
         By default, add-debrief-hints will display the debrief using the following format:
 
-        Title: Answer
-        Debrief:
-        Correct! Here is the question summary.
+        Debrief: {{debrief-title}}
 
-        #### Question
+        ## Answer(s)
 
-        {{question}}
+        {{answers}}
 
-        #### Hints
+        ## Hints(s)
 
-        {{hint1name}}:
+        Hint 1 -- {{hint1}}
 
-        {{hint1content}}
+        Hint 2 -- {{hint2}}
 
         ... repeated for all hints
-
-        #### Answer
-
-        {{answer}}
-
-
-        You can customize the debrief content formatting using an ASCII text
-        template file (--template).  Use the markers {{{{question}}}},
-        {{{{hints}}}}, and {{{{answer}}}} to populate the template content.
 
 USAGE
 
@@ -426,7 +436,22 @@ EXAMPLE
 
         riocli add-debrief-hints --packageid 9a511970-485d-471c-ab3f-b7214319a8b3
 
-        riocli add-debrief-hints --packageid 9a511970-485d-471c-ab3f-b7214319a8b3 -t debrieftemplate.txt
+"""
+
+
+def _parser_deletedebriefs_help(parser):
+    return f"""
+DESCRIPTION
+
+        delete-debriefs will remove all debriefs from the specified package.
+
+USAGE
+
+        {parser.format_usage()}
+
+EXAMPLE
+
+        riocli delete-debriefs --packageid 9a511970-485d-471c-ab3f-b7214319a8b3
 
 """
 
@@ -475,8 +500,13 @@ def _parse_process():
     parser_adddebriefhints = subparser.add_parser('add-debrief-hints',
                                                   formatter_class=argparse.RawTextHelpFormatter)
     parser_adddebriefhints.add_argument('-p', '--packageid', type=str, required=True)
-    parser_adddebriefhints.add_argument('-t', '--template', type=str, required=False)
     parser_adddebriefhints.epilog = _parser_adddebriefhints_help(parser_adddebriefhints)
+
+    # delete-debriefs
+    parser_deletedebriefs = subparser.add_parser('delete-debriefs',
+                                                 formatter_class=argparse.RawTextHelpFormatter)
+    parser_deletedebriefs.add_argument('-p', '--packageid', type=str, required=True)
+    parser_deletedebriefs.epilog = _parser_deletedebriefs_help(parser_deletedebriefs)
 
     # add-package
     parser_addpackage = subparser.add_parser('add-package',
@@ -516,7 +546,7 @@ def _parse_process():
     token = readcredentials()
 
     if args.command == 'add-debrief-hints':
-        adddebriefhints(token, args.packageid, args.template)
+        adddebriefhints(token, args.packageid)
     elif args.command == 'list-packages':
         printpackagelist(getpackagelist(token))
     elif args.command == 'list-permissions':
@@ -525,6 +555,8 @@ def _parse_process():
         printuser(getuser(token))
     elif args.command == 'get-package':
         printpackage(getpackage(token, args.packageid))
+    elif args.command == 'delete-debriefs':
+        deletedebriefs(token, args.packageid)
 
 
 if __name__ == '__main__':
