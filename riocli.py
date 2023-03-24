@@ -5,11 +5,6 @@ import json
 import pathlib
 import argparse
 import requests
-import re
-# import textwrap
-import pdb
-import logging
-import http.client
 
 
 apiurl = 'https://ranges.io/api/v1'
@@ -116,6 +111,46 @@ def deletedebriefs(token: str, uuid: str) -> None:
     requests.put(f'{apiurl}{apipackage}/{uuid}',
                  headers={'Authorization': f'Bearer {token}'},
                  data=json.dumps(package))
+
+
+def addpackage(token: str, packagefile: str) -> str:
+    """Add the package JSON file packagefile as a package.
+
+    Return server response summary.
+
+    Parameters
+    ----------
+    token: str, required
+        The token for author package access.
+
+    packagefile: str, required
+        The Ranges.io package to upload as a file name
+    """
+    package = None
+    with open(packagefile, 'r') as f:
+        package = json.loads(f.read())
+    if package is None:
+        sys.stderr.write(f'Invalid package data in {packagefile}.\n')
+        return None
+
+    # Downloading a package from the web UI returns a different format than
+    # retrieving the same package from the API. Handle either data format.
+    try:
+        if ('groups' in package['package']['export'].keys()):
+            package = package['package']['export']
+    except KeyError:
+        pass
+
+    if 'groups' not in package.keys():
+        sys.stderr.write(f'Invalid package data in {packagefile} (missing groups key).\n')
+        return None
+
+    import pdb
+    pdb.set_trace()
+    response = requests.post(f'{apiurl}{apipackage}', headers={
+        'Authorization': f'Bearer {token}'}, data=json.dumps(package))
+
+    return response.text
 
 
 def adddebriefhints(token: str, uuid: str) -> str:
@@ -403,6 +438,23 @@ EXAMPLE
 """
 
 
+def _parser_addpackage_help(parser):
+    return f"""
+DESCRIPTION
+
+        add-package will add a new package from a specified JSON file.
+
+USAGE
+
+        {parser.format_usage()}
+
+EXAMPLE
+
+        riocli add-package --packagefile package.json
+
+"""
+
+
 def _parser_adddebriefhints_help(parser):
     return f"""
 DESCRIPTION
@@ -456,12 +508,6 @@ EXAMPLE
 """
 
 
-def _parser_addpackage_help(parser):
-    return """
-    TODO
-"""
-
-
 def _parser_listpermissions_help(parser):
     return """
     TODO
@@ -476,7 +522,7 @@ def _parser_getuseridentity_help(parser):
 
 class RiocliParser(argparse.ArgumentParser):
     def error(self, message):
-        sys.stderr.write(f'ERROR: {message}')
+        # sys.stderr.write(f'ERROR: {message}\n')
         self.print_help()
         sys.exit(2)
 
@@ -547,6 +593,8 @@ def _parse_process():
 
     if args.packagecommand == 'add-debrief-hints':
         adddebriefhints(token, args.packageid)
+    elif args.packagecommand == 'add-package':
+        print(addpackage(token, args.packagefile))
     elif args.packagecommand == 'list-packages':
         printpackagelist(getpackagelist(token))
     elif args.packagecommand == 'list-permissions':
