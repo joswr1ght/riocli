@@ -145,8 +145,6 @@ def addpackage(token: str, packagefile: str) -> str:
         sys.stderr.write(f'Invalid package data in {packagefile} (missing groups key).\n')
         return None
 
-    import pdb
-    pdb.set_trace()
     response = requests.post(f'{apiurl}{apipackage}', headers={
         'Authorization': f'Bearer {token}'}, data=json.dumps(package))
 
@@ -202,6 +200,28 @@ def adddebriefhints(token: str, uuid: str) -> str:
                             data=json.dumps(package))
 
     return response.text
+
+
+def deletepackage(token: str, uuid: str) -> str:
+    """Delete the package specified by UUID.
+
+    Return server response message (if any)
+
+    Parameters
+    ----------
+    token: str, required
+        The token for author package access.
+
+    uuid: str, required
+        The Ranges.io package ID
+    """
+    response = requests.delete(f'{apiurl}{apipackage}/{uuid}',
+                               headers={'Authorization': f'Bearer {token}'})
+
+    import pdb
+    pdb.set_trace()
+    return response.text
+
 
 
 def getpackagelist(token: str) -> str:
@@ -393,6 +413,7 @@ AVAILABLE SERVICES
        o add-debrief-hints
        o delete-debriefs
        o get-package
+       o add-package
        o get-user-identity
        o help
        o list-packages
@@ -433,7 +454,7 @@ USAGE
 
 EXAMPLE
 
-        riocli get-package 9a511970-485d-471c-ab3f-b7214319a8b3
+        riocli get-package --packageid 9a511970-485d-471c-ab3f-b7214319a8b3
 
 """
 
@@ -451,6 +472,25 @@ USAGE
 EXAMPLE
 
         riocli add-package --packagefile package.json
+
+"""
+
+
+def _parser_deletepackage_help(parser):
+    return f"""
+DESCRIPTION
+
+        delete-package will delete the package specified by the UUID.
+
+        WARNING: This is not recoverable! Make a backup first.
+
+USAGE
+
+        {parser.format_usage()}
+
+EXAMPLE
+
+        riocli delete-package --packageid 9a511970-485d-471c-ab3f-b7214319a8b3
 
 """
 
@@ -576,6 +616,12 @@ def _parse_process():
     parser_getpackage.add_argument('-p', '--packageid', type=str, required=True)
     parser_getpackage.epilog = _parser_getpackage_help(parser_getpackage)
 
+    # delete-package - not yet implemented by RIO 2023-03-23
+    # parser_deletepackage = packagesubparser.add_parser('delete-package',
+    #                                                    formatter_class=argparse.RawTextHelpFormatter)
+    # parser_deletepackage.add_argument('-p', '--packageid', type=str, required=True)
+    # parser_deletepackage.epilog = _parser_deletepackage_help(parser_deletepackage)
+
     # get-user-identity
     parser_getuseridentity = packagesubparser.add_parser('get-user-identity',
                                                          formatter_class=argparse.RawTextHelpFormatter)
@@ -605,6 +651,8 @@ def _parse_process():
         printpackage(getpackage(token, args.packageid))
     elif args.packagecommand == 'delete-debriefs':
         deletedebriefs(token, args.packageid)
+    elif args.packagecommand == 'delete-package':
+        deletepackage(token, args.packageid)
 
 
 if __name__ == '__main__':
