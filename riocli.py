@@ -638,7 +638,7 @@ def _parse_process():
     token = readcredentials()
 
     if args.packagecommand == 'add-debrief-hints':
-        adddebriefhints(token, args.packageid)
+        print(adddebriefhints(token, args.packageid))
     elif args.packagecommand == 'add-package':
         print(addpackage(token, args.packagefile))
     elif args.packagecommand == 'list-packages':
