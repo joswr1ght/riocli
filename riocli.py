@@ -187,13 +187,15 @@ def adddebriefhints(token: str, uuid: str) -> str:
 
             # If the briefing includes at least an `Answer` string, then make it the debrief
             if ('Answer' in briefing):
-                debrief = {'title': f'Debrief: {challenge["briefing"]}',
+
+                # Debrief titles can't be mroe than 250 characters
+                title = f'Debrief: {challenge["briefing"]}'
+                title = title[0:250]
+
+                debrief = {'title': title,
                            'activationMode': 'Any correct answer',
                            'content': briefing}
                 challenge['debriefs'] = [debrief]
-
-    # with open('out.json', 'w') as f:
-    #     f.write(json.dumps(package, indent=1))
 
     response = requests.put(f'{apiurl}{apipackage}/{uuid}',
                             headers={'Authorization': f'Bearer {token}'},
